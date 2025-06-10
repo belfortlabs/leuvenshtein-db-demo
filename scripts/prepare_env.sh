@@ -22,6 +22,7 @@ echo "Patch TFHE-rs for Belfort FPGA acceleration"
 git checkout tags/$TFHERS_TAG -b $TFHERS_TAG
 wget https://raw.githubusercontent.com/belfortlabs/hello-fpga/refs/heads/f2/belfort.patch
 
+git apply $REPO_DIR/belfort.patch
 git apply $REPO_DIR/leuvenshtein.patch
 
 echo "================================="
