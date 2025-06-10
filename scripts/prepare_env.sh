@@ -12,6 +12,9 @@ echo "Clone TFHE-rs"
 
 export TFHERS_URL=https://github.com/zama-ai/tfhe-rs.git
 export TFHERS_TAG=tfhe-rs-0.11.3
+
+wget https://raw.githubusercontent.com/belfortlabs/hello-fpga/refs/heads/f2/belfort.patch
+
 git clone --no-checkout $TFHERS_URL $TFHERS_DIR
 
 
@@ -20,7 +23,6 @@ echo "==========================================="
 echo "Patch TFHE-rs for Belfort FPGA acceleration"
 
 git checkout tags/$TFHERS_TAG -b $TFHERS_TAG
-wget https://raw.githubusercontent.com/belfortlabs/hello-fpga/refs/heads/f2/belfort.patch
 
 git apply $REPO_DIR/belfort.patch
 git apply $REPO_DIR/leuvenshtein.patch
