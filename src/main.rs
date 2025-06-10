@@ -14,7 +14,6 @@ use std::collections::HashMap;
 use std::time::Instant;
 use std::{error::Error, io};
 use tfhe::shortint::prelude::*;
-use tfhe::prelude::*;
 
 use pad::PadStr;
 
@@ -26,22 +25,14 @@ use crate::app::App;
 use crate::app::InputMode;
 
 use tfhe::integer::fpga::BelfortServerKey;
-use tfhe::{ConfigBuilder, generate_keys, set_server_key, FheUint4};
 
-use tfhe::core_crypto::prelude::*;
 use tfhe::integer::ServerKey as IntegerServerKey;
-use tfhe::shortint::engine::ShortintEngine;
-use tfhe::shortint::prelude::*;
-use tfhe::shortint::server_key::ShortintBootstrappingKey;
-
-const FPGA_COUNT: usize = 4;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-
 
 fn main() -> Result<(), Box<dyn Error>> {
     // setup terminal
@@ -72,14 +63,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
-
     let params: ClassicPBSParameters = tfhe::shortint::parameters::PARAM_MESSAGE_2_CARRY_2;
     let cks: ClientKey = ClientKey::new(params);
     let sks: ServerKey = ServerKey::new(&cks);
     let integer_server_key: IntegerServerKey =
         tfhe::integer::ServerKey::new_radix_server_key_from_shortint(sks.clone());
     let mut fpga_key = BelfortServerKey::from(&integer_server_key);
-
 
     let db_size = data::NAME_LIST.len();
 
@@ -152,9 +141,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
         lut_min_vec_fpga: Vec::new(),
     };
 
-    #[cfg(feature = "fpga")] {
-        let fpga_indexes = (0..FPGA_COUNT).collect();
-        enc_struct.fpga_key.connect_to(fpga_indexes);
+    #[cfg(feature = "fpga")]
+    {
+        enc_struct.fpga_key.connect();
     }
 
     loop {
@@ -186,7 +175,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 }
             }
         } else if matches!(app.input_mode, InputMode::FProcess) {
-
             if app.input.starts_with("p:") {
                 if app.progress_done.len() == 0 {
                     app.process_plain_query_enc_db(&mut enc_struct);
@@ -312,11 +300,13 @@ fn ui(f: &mut Frame, app: &App, enc_struct: &EncStruct) {
             vec![
                 "Press ".into(),
                 "q".bold(),
-                " to exit, ".into(),
+                " to exit; ".into(),
                 "e".bold(),
-                " to start entering; ".bold(),
+                " to start CPU-based query; ".into(),
                 "f".bold(),
-                " to start ".bold(), "FPGA".bold().italic().yellow(), " entering.".bold(),
+                " to start ".into(),
+                "FPGA-accelerated".bold().italic().yellow(),
+                " query.".into(),
             ],
             Style::default().add_modifier(Modifier::RAPID_BLINK),
         ),
@@ -345,7 +335,7 @@ fn ui(f: &mut Frame, app: &App, enc_struct: &EncStruct) {
             Style::default(),
         ),
         InputMode::FProcess => (
-            vec!["Processing togheter with FPGA...".into()],
+            vec!["Processing with FPGA...".into()],
             Style::default().add_modifier(Modifier::SLOW_BLINK),
         ),
     };
@@ -430,7 +420,7 @@ fn ui(f: &mut Frame, app: &App, enc_struct: &EncStruct) {
             let span2 = <String as Clone>::clone(&m.1).green().bold();
 
             let span3: Vec<Span<'_>>;
-            
+
             if &m.3 == "Normal execution" {
                 span3 = vec![<String as Clone>::clone(&m.3).blue().bold()];
             } else if &m.3 == "plaintext query" {
@@ -439,22 +429,32 @@ fn ui(f: &mut Frame, app: &App, enc_struct: &EncStruct) {
                 span3 = vec![<String as Clone>::clone(&m.3).yellow().bold()];
             } else {
                 span3 = vec![
-                    Span::styled("plaintext query", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "plaintext query",
+                        Style::default()
+                            .fg(Color::Magenta)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::from(" and "),
-                    Span::styled("FPGA Acceleration", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                  ];
+                    Span::styled(
+                        "FPGA Acceleration",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ];
             }
-        
+
             let mut line_part_1 = vec![
                 string_build.into(),
                 span1,
-                "\" Matches with \"".into(),
+                "\" matches with \"".into(),
                 span2,
                 string2_build.into(),
-            ];  
+            ];
             line_part_1.append(&mut span3.clone());
 
-            let line:Line<'_> = Line::from(line_part_1);
+            let line: Line<'_> = Line::from(line_part_1);
 
             ListItem::new(line)
         })

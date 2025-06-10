@@ -8,7 +8,6 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-
 use std::collections::HashMap;
 use std::time::Instant;
 use tfhe::shortint::server_key::LookupTable;
@@ -17,22 +16,18 @@ use tfhe::shortint::prelude::*;
 
 use tfhe::core_crypto::commons::generators::DeterministicSeeder;
 use tfhe::core_crypto::commons::math::random::Seed;
-use tfhe::core_crypto::fpga::BelfortFpgaUtils;
 use tfhe::core_crypto::fpga::utils::Connect;
 use tfhe::core_crypto::prelude::*;
-use tfhe::shortint::engine::ShortintEngine;
 use tfhe::integer::fpga::BelfortServerKey;
-use tfhe::{ConfigBuilder, generate_keys, set_server_key, FheUint4};
+use tfhe::shortint::engine::ShortintEngine;
+use tfhe::{generate_keys, set_server_key, ConfigBuilder, FheUint4};
 
 use tfhe::core_crypto::prelude::*;
 use tfhe::integer::ServerKey as IntegerServerKey;
 use tfhe::shortint::prelude::*;
 use tfhe::shortint::server_key::ShortintBootstrappingKey;
 
-
 use pad::PadStr;
-
-const FPGA_COUNT: usize = 4;
 
 mod myers;
 
@@ -72,7 +67,7 @@ fn main() {
 
     // DB processing and encrypting
     let db_size: usize = super_mod::data::NAME_LIST.len();
-    // let db_size = 768; 
+    // let db_size = 768;
 
     let mut db_len: HashMap<usize, usize> = HashMap::with_capacity(db_size);
 
@@ -93,7 +88,12 @@ fn main() {
         );
         // let outcome = lev[x.len()] as i64;
         plain_score.insert(i, lev as i64);
-        println!("{} [{}]: {}", super_mod::data::NAME_LIST[i], super_mod::data::NAME_LIST[i].len(), lev);
+        println!(
+            "{} [{}]: {}",
+            super_mod::data::NAME_LIST[i],
+            super_mod::data::NAME_LIST[i].len(),
+            lev
+        );
     }
 
     // Params and Keys
@@ -103,16 +103,14 @@ fn main() {
     let integer_server_key: IntegerServerKey =
         tfhe::integer::ServerKey::new_radix_server_key_from_shortint(sks.clone());
     let mut fpga_key = BelfortServerKey::from(&integer_server_key);
-    
-    #[cfg(feature = "fpga")] {
-        let fpga_indexes = (0..FPGA_COUNT).collect();
-        fpga_key.connect_to(fpga_indexes);
+
+    #[cfg(feature = "fpga")]
+    {
+        fpga_key.connect();
     }
 
-
     let t = Instant::now();
-    let lev_enc =
-      myers::process_enc_query_enc_db(&x, &cks, &sks, &mut fpga_key, db_size, true);
+    let lev_enc = myers::process_enc_query_enc_db(&x, &cks, &sks, &mut fpga_key, db_size, true);
     // let lev_enc =
     //     levenshtein::myers::process_plain_query_enc_db(&x, &cks, &sks, &mut fpga, true);
     let sec = t.elapsed().as_secs_f64();
@@ -139,11 +137,9 @@ fn main() {
 
     if max_diff <= 5 {
         println!("No match found; try larger query");
-    }
-    else{
+    } else {
         println!("Matched name: {matched_name} - {max_diff}");
     }
-
 
     // for i in 0..super_mod::data::NAME_LIST.len() {
     //     let enc_score = lev_enc.get(&i).unwrap();
@@ -152,12 +148,12 @@ fn main() {
     //     let diff: i64 = i64::abs_diff(
     //         *enc_score,
     //         super_mod::data::NAME_LIST[i].len() as i64) as i64 ;
-    //     let diff = diff - offset;    
-             
+    //     let diff = diff - offset;
+
     //     if diff > max_diff
     //     {
     //         matched_name = super_mod::data::NAME_LIST[i].to_string();
-    //         max_diff = diff; 
+    //         max_diff = diff;
     //        }
     // }
 
@@ -192,9 +188,6 @@ fn main() {
 
     #[cfg(feature = "fpga")]
     {
-      fpga_key.disconnect();
+        fpga_key.disconnect();
     }
-
 }
-
-
