@@ -1,6 +1,6 @@
 // Created by: Wouter Legiest
 
-pub const NAME_LIST_names: [&'static str; 48]= [
+pub const NAME_LIST: [&'static str; 48]= [
 "Wouter Legiest",
 "Jan-Pieter D'Anvers", 
 "Ingrid Verbauwhede",  
@@ -51,7 +51,7 @@ pub const NAME_LIST_names: [&'static str; 48]= [
 "Rick Deckard"
 ];
 
-pub const NAME_LIST: [&'static str; 48]= [
+pub const NAME_LIST_8char: [&'static str; 48]= [
 "bvdyurfg",
 "htueoirw",
 "jsiwoqaz",
